@@ -13,9 +13,9 @@ import jdk.nashorn.internal.parser.JSONParser;
 import netscape.javascript.JSObject;
 
 public class XuLy {
-	public String getLinkZingTV(String link) {
+	public ArrayList<String> getLinkBiLuTV(String link) {
 		WebClient webClient = new WebClient(BrowserVersion.FIREFOX_60);
-	    webClient.getOptions().setJavaScriptEnabled(false);
+	    webClient.getOptions().setJavaScriptEnabled(true);
 	    webClient.getOptions().setThrowExceptionOnScriptError(false);
 	    webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
 	    webClient.waitForBackgroundJavaScript(1000);
@@ -28,11 +28,19 @@ public class XuLy {
 			e.printStackTrace();
 		}
 		webClient.close();
-		String xml = page.asXml();
-		String player = getPlayer(xml);
-		String sourceLevel = getSourceLevel(player);
-		String result = "["+sourceLevel+"]";
-	    return result;
+		
+		// lấy chiều dài link
+	    ScriptResult scriptResult = page.executeJavaScript("playerSetting.sourceLinks.length");
+	    Double sizeLink = (Double) scriptResult.getJavaScriptResult();
+	    
+	    // link video
+	    ArrayList<String> links = new ArrayList<>();
+	    for(int i=0; i<sizeLink; i++) {
+	    	scriptResult = page.executeJavaScript("playerSetting.sourceLinks["+i+"].links[0].file");
+	    	links.add((String) scriptResult.getJavaScriptResult());
+	    }
+	    
+	    return links;
 	}
 	
 	public String getLinkAnimeHay(String link) {
@@ -55,39 +63,20 @@ public class XuLy {
 	    return result;
 	}
 	
-	public String getLinkPhimMoi(String link) {
-		WebClient webClient = new WebClient(BrowserVersion.FIREFOX_60);
-	    webClient.getOptions().setJavaScriptEnabled(false);
-	    webClient.getOptions().setThrowExceptionOnScriptError(false);
-	    webClient.getOptions().setThrowExceptionOnFailingStatusCode(false);
-	    webClient.waitForBackgroundJavaScript(1000);
-	    webClient.waitForBackgroundJavaScriptStartingBefore(1000);
-	    webClient.getOptions().setCssEnabled(false);
-	    HtmlPage page = null;
-		try {
-			page = webClient.getPage(link);
-		} catch (IOException e) {
-			e.printStackTrace();
+	public String covertFromStringToJson(ArrayList<String> result) {
+		StringBuilder json = new StringBuilder();
+		json.append("[");
+		for(int i=0; i<result.size(); i++) {
+			json.append("{");
+			json.append("link: "+result.get(i));
+			json.append("}");
+			if(result.size()-1 != i) {
+				json.append(",");
+			}
 		}
-		String xml = page.asXml();
-		
-	    return xml;
+		json.append("]");
+		return json.toString();
 	}
-
-	private static String getSourceLevel(String player) {
-		int indexbd = player.indexOf("sourceLevel");
-		indexbd = player.indexOf("[", indexbd);
-		String result = player.substring(indexbd+1);
-		return result;
-	}
-
-	private static String getPlayer(String xml) {
-		int indexbd = xml.indexOf("HTML5_PLAYER.player");
-		int indexkt = xml.indexOf("]", indexbd);
-		String result = xml.substring(indexbd, indexkt);
-		return result;
-	}
-	
 	
 //    ScriptResult scriptResult = page.executeJavaScript("HTML5_PLAYER.player._options.source");
 //    System.out.println(scriptResult.getJavaScriptResult());
